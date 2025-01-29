@@ -10,6 +10,8 @@
         input, button { margin: 10px; padding: 10px; }
         .file-list { margin-top: 20px; }
         .qr-code { margin-top: 20px; }
+        .progress-container { margin-top: 10px; display: none; }
+        progress { width: 80%; height: 20px; }
     </style>
 </head>
 <body>
@@ -20,6 +22,12 @@
         <input type="file" id="fileInput" multiple required>
         <button type="button" onclick="uploadFiles()">Upload Files</button>
     </form>    
+
+    <div class="progress-container" id="progressContainer">
+        <h3>Upload Progress:</h3>
+        <progress id="uploadProgress" value="0" max="100"></progress>
+        <p id="progressText">0%</p>
+    </div>
 
     <!-- File List -->
     <div class="file-list">
@@ -46,18 +54,43 @@
                 formData.append("files", fileInput[i]);
             }
 
+            var progressBar = document.getElementById("uploadProgress");
+            var progressText = document.getElementById("progressText");
+            var progressContainer = document.getElementById("progressContainer");
+            progressContainer.style.display = "block";
+
             fetch("/upload", {
                 method: "POST",
-                body: formData
+                body: formData,
+                headers: { "Accept": "application/json" }
             })
-            .then(response => response.json())
-            .then(data => {
+            .then(response => {
+                if (!response.ok) throw new Error("Upload failed");
+                return response.json();
+            }).then(data => {
                 alert(data.message);
+                progressBar.value = 100;
+                progressText.innerText = "100%";
+                setTimeout(() => progressContainer.style.display = "none", 2000); // Hide after completion
                 loadFiles();
             })
-            .catch(error => alert("Error uploading files."));
-        }
+            .catch(error => {
+                alert("Error uploading files.");
+                progressContainer.style.display = "none";
+            });
 
+            // Track progress using XMLHttpRequest
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "/upload", true);
+            xhr.upload.onprogress = function(event) {
+                if (event.lengthComputable) {
+                    var percent = Math.round((event.loaded / event.total) * 100);
+                    progressBar.value = percent;
+                    progressText.innerText = percent + "%";
+                }
+            };
+            xhr.send(formData);
+        }
         function loadFiles() {
             fetch("/files")
             .then(response => response.json())
