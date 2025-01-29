@@ -2,8 +2,13 @@
 Easily send and receive files with others on the same WiFi network.  
 
 ## Installation  
-Install the required Python packages:  
+Download the directory or clone it using:  
 ```sh
+git clone https://github.com/swarajvee/File-Transfer-Through-WiFi.git
+```
+Then, navigate into the directory and install the required Python packages:  
+```sh
+cd File-Transfer-Through-WiFi
 pip install -r requirements.txt
 ```
 
@@ -15,5 +20,5 @@ python path/to/dir/fileTransfer.py
 
 ## Notes  
 - Shared files are stored in the `shared_files` folder inside the code directory.  
-- The script automatically removes all previously shared files and QR code when restarted.  
-- You can manually delete the `shared_files` folder if needed.  
+- The script automatically removes all previously shared files and the QR code when restarted.  
+- You can manually delete the `shared_files` folder if needed (I recommend running the script again to clear the `shared_files` directory).  
