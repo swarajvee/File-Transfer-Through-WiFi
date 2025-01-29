@@ -6,6 +6,8 @@ Download the directory or clone it using:
 ```sh
 git clone https://github.com/swarajvee/File-Transfer-Through-WiFi.git
 ```
+open a terminal inside this directory 
+
 Then install the required Python packages:  
 ```sh
 pip install -r requirements.txt
@@ -14,7 +16,7 @@ pip install -r requirements.txt
 ## Usage  
 Run the script using (press tab for autocompletion):  
 ```sh
-python path/to/dir/fileTransfer.py
+python fileTransfer.py
 ```
 The code will display an HTTP link with two IP addresses: one is the local IP of your machine, and the other is the network IP. Open the HTTP link associated with the network IP (second one) to start the file transfer.  
 
