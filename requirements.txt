@@ -1,0 +1,5 @@
+Flask
+Flask-CORS
+qrcode
+
+#pip install -r requirements.txt to install these packages
