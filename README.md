@@ -6,9 +6,8 @@ Download the directory or clone it using:
 ```sh
 git clone https://github.com/swarajvee/File-Transfer-Through-WiFi.git
 ```
-Then, navigate into the directory and install the required Python packages:  
+Then install the required Python packages:  
 ```sh
-cd File-Transfer-Through-WiFi
 pip install -r requirements.txt
 ```
 
