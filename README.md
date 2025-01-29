@@ -12,7 +12,7 @@ pip install -r requirements.txt
 ```
 
 ## Usage  
-Run the script using:  
+Run the script using (press tab for autocompletion):  
 ```sh
 python path/to/dir/fileTransfer.py
 ```
