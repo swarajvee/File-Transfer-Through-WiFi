@@ -16,6 +16,7 @@ Run the script using:
 ```sh
 python path/to/dir/fileTransfer.py
 ```
+The code will display an HTTP link with two IP addresses: one is the local IP of your machine, and the other is the network IP. Open the HTTP link associated with the network IP (second one) to start the file transfer.  
 
 ## Notes  
 - Shared files are stored in the `shared_files` folder inside the code directory.  
