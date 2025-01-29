@@ -2,23 +2,25 @@
 Easily send and receive files with others on the same WiFi network.  
 
 ## Installation  
-Download the directory or clone it using:  
+1. Download the directory or clone it using:  
 ```sh
 git clone https://github.com/swarajvee/File-Transfer-Through-WiFi.git
 ```
-open a terminal inside this directory 
+2. Open a terminal inside this directory.  
 
-Then install the required Python packages:  
+3. Install the required Python packages:  
 ```sh
 pip install -r requirements.txt
 ```
 
 ## Usage  
-Run the script using (press tab for autocompletion):  
+4. Run the script using (press tab for autocompletion):  
 ```sh
 python fileTransfer.py
 ```
-The code will display an HTTP link with two IP addresses: one is the local IP of your machine, and the other is the network IP. Open the HTTP link associated with the network IP (second one) to start the file transfer.  
+The code will display an HTTP link with two IP addresses: one is the local IP of your machine, and the other is the network IP.  
+
+5. Open the HTTP link associated with the network IP (the second one) to start the file transfer.  
 
 ## Notes  
 - Shared files are stored in the `shared_files` folder inside the code directory.  
