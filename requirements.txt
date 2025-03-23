@@ -1,5 +1,6 @@
 Flask
 Flask-CORS
 qrcode
+pillow
 
 #pip install -r requirements.txt to install these packages
