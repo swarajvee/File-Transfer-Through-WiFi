@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ShareMe</title>
+    <title>Nigga The Sender</title>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; margin: 50px; }
         h2 { color: #333; }
@@ -12,10 +12,12 @@
         .qr-code { margin-top: 20px; }
         .progress-container { margin-top: 10px; display: none; }
         progress { width: 80%; height: 20px; }
+        .action-buttons { margin-top: 20px; }
+        .file-item { margin: 5px 0; }
     </style>
 </head>
 <body>
-    <h2>ShareMe</h2>
+    <h2>Nigga The Sender</h2>
 
     <!-- Upload Form -->
     <form id="uploadForm" enctype="multipart/form-data">
@@ -33,6 +35,12 @@
     <div class="file-list">
         <h3>Available Files:</h3>
         <ul id="fileList"></ul>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        <button onclick="downloadAll()">Download All as ZIP</button>
+        <button onclick="cleanupFiles()" style="background-color: #ff4444; color: white;">Clean Up All Files</button>
     </div>
 
     <!-- QR Code -->
@@ -59,38 +67,39 @@
             var progressContainer = document.getElementById("progressContainer");
             progressContainer.style.display = "block";
 
-            fetch("/upload", {
-                method: "POST",
-                body: formData,
-                headers: { "Accept": "application/json" }
-            })
-            .then(response => {
-                if (!response.ok) throw new Error("Upload failed");
-                return response.json();
-            }).then(data => {
-                alert(data.message);
-                progressBar.value = 100;
-                progressText.innerText = "100%";
-                setTimeout(() => progressContainer.style.display = "none", 2000);
-                loadFiles();
-            })
-            .catch(error => {
-                alert("Error uploading files.");
-                progressContainer.style.display = "none";
-            });
-
-            // Track progress using XMLHttpRequest
+            // Use XMLHttpRequest for progress tracking
             var xhr = new XMLHttpRequest();
-            xhr.open("POST", "/upload", true);
-            xhr.upload.onprogress = function(event) {
+            
+            xhr.upload.addEventListener("progress", function(event) {
                 if (event.lengthComputable) {
                     var percent = Math.round((event.loaded / event.total) * 100);
                     progressBar.value = percent;
                     progressText.innerText = percent + "%";
                 }
-            };
+            });
+            
+            xhr.addEventListener("load", function() {
+                if (xhr.status === 200) {
+                    alert("Files uploaded successfully!");
+                    progressBar.value = 100;
+                    progressText.innerText = "100%";
+                    setTimeout(() => progressContainer.style.display = "none", 2000);
+                    loadFiles();
+                } else {
+                    alert("Error uploading files: " + xhr.responseText);
+                    progressContainer.style.display = "none";
+                }
+            });
+            
+            xhr.addEventListener("error", function() {
+                alert("Error uploading files.");
+                progressContainer.style.display = "none";
+            });
+            
+            xhr.open("POST", "/upload", true);
             xhr.send(formData);
         }
+
         function loadFiles() {
             fetch("/files")
             .then(response => response.json())
@@ -99,11 +108,30 @@
                 fileList.innerHTML = "";
                 data.files.forEach(file => {
                     var listItem = document.createElement("li");
+                    listItem.className = "file-item";
                     listItem.innerHTML = `<a href="/download/${file}" download>${file}</a>`;
                     fileList.appendChild(listItem);
                 });
             })
-            .catch(error => console.error("Error loading files."));
+            .catch(error => console.error("Error loading files:", error));
+        }
+
+        function downloadAll() {
+            window.location.href = "/download-zip";
+        }
+
+        function cleanupFiles() {
+            if (confirm("Are you sure you want to delete all files? This cannot be undone.")) {
+                fetch("/cleanup", { method: "POST" })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                    loadFiles(); // Refresh file list
+                })
+                .catch(error => {
+                    alert("Error cleaning up files: " + error);
+                });
+            }
         }
 
         window.onload = loadFiles;
