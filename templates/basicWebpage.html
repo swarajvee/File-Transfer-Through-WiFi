@@ -3,76 +3,413 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ShareMe</title>
+    <title>Enhanced File Sender</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin: 50px; }
-        h2 { color: #333; }
-        input, button { margin: 10px; padding: 10px; }
-        .file-list { margin-top: 20px; }
-        .qr-code { margin-top: 20px; }
-        .progress-container { margin-top: 10px; display: none; }
-        progress { width: 80%; height: 20px; }
-        .action-buttons { margin-top: 20px; }
-        .file-item { margin: 5px 0; }
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h2 { 
+            color: #2c3e50; 
+            margin-top: 0;
+            text-align: center;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        h3 {
+            color: #3498db;
+            margin-top: 0;
+        }
+        input, button, select { 
+            margin: 8px 0; 
+            padding: 10px; 
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .file-list { 
+            margin-top: 20px; 
+            max-width: 100%;
+            margin: 20px 0;
+        }
+        .qr-code { 
+            margin-top: 20px; 
+            text-align: center;
+        }
+        .progress-container { 
+            margin-top: 15px; 
+            display: none; 
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        progress { 
+            width: 100%; 
+            height: 20px; 
+            border-radius: 5px;
+        }
+        .action-buttons { 
+            margin-top: 20px; 
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .file-item { 
+            padding: 10px; 
+            border-bottom: 1px solid #eee; 
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .file-item:hover { 
+            background-color: #f5f5f5; 
+        }
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .file-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .upload-options { 
+            margin: 15px 0; 
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .upload-option { 
+            padding: 10px 15px; 
+            background: #e9ecef; 
+            border: 1px solid #ddd; 
+            cursor: pointer; 
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+        .upload-option.active { 
+            background: #3498db; 
+            color: white; 
+            border-color: #3498db; 
+        }
+        .hidden { 
+            display: none; 
+        }
+        .storage-info { 
+            margin: 20px 0; 
+            padding: 15px; 
+            background: #e8f4fc; 
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+        }
+        .storage-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .stat-box {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .stat-value {
+            font-weight: bold;
+            font-size: 1.2em;
+            color: #2c3e50;
+        }
+        .stat-label {
+            font-size: 0.9em;
+            color: #7f8c8d;
+        }
+        .delete-btn {
+            background-color: #e74c3c;
+            padding: 5px 10px;
+            font-size: 0.8em;
+        }
+        .delete-btn:hover {
+            background-color: #c0392b;
+        }
+        .danger-btn {
+            background-color: #e74c3c;
+        }
+        .danger-btn:hover {
+            background-color: #c0392b;
+        }
+        .success-btn {
+            background-color: #2ecc71;
+        }
+        .success-btn:hover {
+            background-color: #27ae60;
+        }
+        .folder-structure {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            font-family: monospace;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            color: white;
+            opacity: 0;
+            transform: translateX(100px);
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+        .notification.success {
+            background-color: #2ecc71;
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .notification.error {
+            background-color: #e74c3c;
+            opacity: 1;
+            transform: translateX(0);
+        }
+        @media (max-width: 768px) {
+            .action-buttons {
+                flex-direction: column;
+            }
+            .upload-options {
+                flex-direction: column;
+            }
+        }
     </style>
 </head>
 <body>
-    <h2>ShareMe</h2>
+    <div class="container">
+        <h2>Enhanced File Sender</h2>
 
-    <!-- Upload Form -->
-    <form id="uploadForm" enctype="multipart/form-data">
-        <input type="file" id="fileInput" multiple required>
-        <button type="button" onclick="uploadFiles()">Upload Files</button>
-    </form>    
+        <!-- Notification Area -->
+        <div id="notification" class="notification hidden"></div>
 
-    <div class="progress-container" id="progressContainer">
-        <h3>Upload Progress:</h3>
-        <progress id="uploadProgress" value="0" max="100"></progress>
-        <p id="progressText">0%</p>
-    </div>
+        <!-- Storage Information -->
+        <div class="storage-info">
+            <h3>Storage Information</h3>
+            <div class="storage-stats" id="storageStats">
+                <div class="stat-box">
+                    <div class="stat-value" id="totalDisk">Loading...</div>
+                    <div class="stat-label">Total Disk</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="freeDisk">Loading...</div>
+                    <div class="stat-label">Free Space</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="uploadedSize">Loading...</div>
+                    <div class="stat-label">Uploaded Files</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="fileCount">Loading...</div>
+                    <div class="stat-label">File Count</div>
+                </div>
+            </div>
+            <button onclick="loadStorageInfo()" style="margin-top: 15px;">Refresh Storage Info</button>
+        </div>
 
-    <!-- File List -->
-    <div class="file-list">
-        <h3>Available Files:</h3>
-        <ul id="fileList"></ul>
-    </div>
+        <!-- Upload Options -->
+        <div class="upload-options">
+            <span class="upload-option active" id="fileOption" onclick="toggleUploadOption('file')">📁 Upload Files</span>
+            <span class="upload-option" id="folderOption" onclick="toggleUploadOption('folder')">📂 Upload Folder</span>
+            <span class="upload-option" id="createFolderOption" onclick="createNewFolder()">➕ Create Folder</span>
+        </div>
 
-    <!-- Action Buttons -->
-    <div class="action-buttons">
-        <button onclick="downloadAll()">Download All as ZIP</button>
-        <button onclick="cleanupFiles()" style="background-color: #ff4444; color: white;">Clean Up All Files</button>
-    </div>
+        <!-- Upload Forms -->
+        <form id="uploadForm" enctype="multipart/form-data">
+            <div id="fileUpload">
+                <input type="file" id="fileInput" multiple required style="width: 100%;">
+            </div>
+            <div id="folderUpload" class="hidden">
+                <input type="file" id="folderInput" webkitdirectory directory multiple required style="width: 100%;">
+                <div id="folderContents" class="folder-structure hidden"></div>
+            </div>
+            <button type="button" onclick="uploadFiles()" class="success-btn" style="width: 100%; margin-top: 10px;">Upload Files</button>
+        </form>    
 
-    <!-- QR Code -->
-    <div class="qr-code">
-        <h3>QR Code:</h3>
-        <img id="qrImage" src="/qr" alt="QR Code" />
+        <div class="progress-container" id="progressContainer">
+            <h3>Upload Progress</h3>
+            <progress id="uploadProgress" value="0" max="100"></progress>
+            <p id="progressText">0%</p>
+        </div>
+
+        <!-- File List -->
+        <div class="file-list">
+            <h3>Available Files & Folders</h3>
+            <div id="fileList"></div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <button onclick="downloadAll()" class="success-btn">Download All as ZIP</button>
+            <button onclick="cleanupFiles()" class="danger-btn">Clean Up All Files</button>
+        </div>
+
+        <!-- QR Code -->
+        <div class="qr-code">
+            <h3>QR Code for Sharing</h3>
+            <p>Scan to access this file server</p>
+            <img id="qrImage" src="/qr" alt="QR Code" style="max-width: 200px;" />
+            <p>URL: <span id="serverUrl"></span></p>
+        </div>
     </div>
 
     <script>
-        function uploadFiles() {
-            var fileInput = document.getElementById("fileInput").files;
-            if (fileInput.length === 0) {
-                alert("Please select at least one file.");
-                return;
-            }
+        let currentUploadType = 'file';
+        let selectedFolderContents = [];
+
+        // Show notification
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
             
-            var formData = new FormData();
-            for (var i = 0; i < fileInput.length; i++) {
-                formData.append("files", fileInput[i]);
+            setTimeout(() => {
+                notification.className = 'notification hidden';
+            }, 3000);
+        }
+
+        function toggleUploadOption(type) {
+            currentUploadType = type;
+            document.getElementById('fileOption').classList.toggle('active', type === 'file');
+            document.getElementById('folderOption').classList.toggle('active', type === 'folder');
+            document.getElementById('fileUpload').classList.toggle('hidden', type !== 'file');
+            document.getElementById('folderUpload').classList.toggle('hidden', type !== 'folder');
+            
+            if (type === 'folder') {
+                document.getElementById('folderInput').value = '';
+                document.getElementById('folderContents').innerHTML = '';
+                document.getElementById('folderContents').classList.add('hidden');
+            }
+        }
+
+        // Display folder structure when a folder is selected
+        document.getElementById('folderInput').addEventListener('change', function(e) {
+            const folderContents = document.getElementById('folderContents');
+            folderContents.innerHTML = '';
+            
+            if (e.target.files.length > 0) {
+                folderContents.classList.remove('hidden');
+                folderContents.innerHTML = '<strong>Folder structure:</strong><br>';
+                
+                // Group files by directory
+                const structure = {};
+                for (let i = 0; i < e.target.files.length; i++) {
+                    const file = e.target.files[i];
+                    const webkitPath = file.webkitRelativePath || '';
+                    const directory = webkitPath.split('/').slice(0, -1).join('/') || 'Root';
+                    
+                    if (!structure[directory]) {
+                        structure[directory] = [];
+                    }
+                    structure[directory].push(file.name);
+                }
+                
+                // Display the structure
+                for (const [dir, files] of Object.entries(structure)) {
+                    folderContents.innerHTML += `<div>📁 ${dir}/</div>`;
+                    files.forEach(file => {
+                        folderContents.innerHTML += `<div style="margin-left: 20px;">📄 ${file}</div>`;
+                    });
+                }
+                
+                showNotification(`Selected ${e.target.files.length} files from folder`, 'success');
+            }
+        });
+
+        function createNewFolder() {
+            const folderName = prompt("Enter folder name:");
+            if (folderName && folderName.trim()) {
+                fetch("/create-folder", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ name: folderName })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        showNotification(data.error, 'error');
+                    } else {
+                        showNotification(data.message, 'success');
+                        loadFiles();
+                    }
+                })
+                .catch(error => {
+                    showNotification("Error creating folder: " + error, 'error');
+                });
+            }
+        }
+
+        function uploadFiles() {
+            let fileInput;
+            let formData = new FormData();
+            
+            if (currentUploadType === 'file') {
+                fileInput = document.getElementById("fileInput").files;
+                if (fileInput.length === 0) {
+                    showNotification("Please select at least one file.", 'error');
+                    return;
+                }
+                for (let i = 0; i < fileInput.length; i++) {
+                    formData.append("files", fileInput[i]);
+                }
+            } else {
+                fileInput = document.getElementById("folderInput").files;
+                if (fileInput.length === 0) {
+                    showNotification("Please select a folder.", 'error');
+                    return;
+                }
+                for (let i = 0; i < fileInput.length; i++) {
+                    const file = fileInput[i];
+                    // For folder uploads, we need to preserve the directory structure
+                    const relativePath = file.webkitRelativePath || file.name;
+                    // Add the file with its relative path information
+                    formData.append("files", file, relativePath);
+                }
             }
 
-            var progressBar = document.getElementById("uploadProgress");
-            var progressText = document.getElementById("progressText");
-            var progressContainer = document.getElementById("progressContainer");
+            const progressBar = document.getElementById("uploadProgress");
+            const progressText = document.getElementById("progressText");
+            const progressContainer = document.getElementById("progressContainer");
             progressContainer.style.display = "block";
+            progressBar.value = 0;
+            progressText.innerText = "0%";
 
-            // Use XMLHttpRequest for progress tracking
-            var xhr = new XMLHttpRequest();
+            const xhr = new XMLHttpRequest();
             
             xhr.upload.addEventListener("progress", function(event) {
                 if (event.lengthComputable) {
-                    var percent = Math.round((event.loaded / event.total) * 100);
+                    const percent = Math.round((event.loaded / event.total) * 100);
                     progressBar.value = percent;
                     progressText.innerText = percent + "%";
                 }
@@ -80,19 +417,27 @@
             
             xhr.addEventListener("load", function() {
                 if (xhr.status === 200) {
-                    alert("Files uploaded successfully!");
+                    showNotification("Upload completed successfully!", 'success');
                     progressBar.value = 100;
                     progressText.innerText = "100%";
-                    setTimeout(() => progressContainer.style.display = "none", 2000);
+                    setTimeout(() => {
+                        progressContainer.style.display = "none";
+                    }, 2000);
                     loadFiles();
+                    loadStorageInfo();
+                    // Clear file inputs
+                    document.getElementById("fileInput").value = "";
+                    document.getElementById("folderInput").value = "";
+                    document.getElementById("folderContents").innerHTML = "";
+                    document.getElementById("folderContents").classList.add("hidden");
                 } else {
-                    alert("Error uploading files: " + xhr.responseText);
+                    showNotification("Error uploading: " + xhr.responseText, 'error');
                     progressContainer.style.display = "none";
                 }
             });
             
             xhr.addEventListener("error", function() {
-                alert("Error uploading files.");
+                showNotification("Error uploading files.", 'error');
                 progressContainer.style.display = "none";
             });
             
@@ -104,16 +449,53 @@
             fetch("/files")
             .then(response => response.json())
             .then(data => {
-                var fileList = document.getElementById("fileList");
+                const fileList = document.getElementById("fileList");
                 fileList.innerHTML = "";
+                
+                if (data.files.length === 0) {
+                    fileList.innerHTML = "<p>No files available. Upload some files to get started.</p>";
+                    return;
+                }
+                
+                // Sort files: folders first, then files
+                data.files.sort((a, b) => {
+                    if (a.is_directory && !b.is_directory) return -1;
+                    if (!a.is_directory && b.is_directory) return 1;
+                    return a.name.localeCompare(b.name);
+                });
+                
                 data.files.forEach(file => {
-                    var listItem = document.createElement("li");
-                    listItem.className = "file-item";
-                    listItem.innerHTML = `<a href="/download/${file}" download>${file}</a>`;
-                    fileList.appendChild(listItem);
+                    const item = document.createElement("div");
+                    item.className = "file-item";
+                    
+                    const isFolder = file.is_directory;
+                    const icon = isFolder ? "📁" : "📄";
+                    const size = isFolder ? "" : ` (${formatFileSize(file.size)})`;
+                    
+                    item.innerHTML = `
+                        <div class="file-info">
+                            <span>${icon}</span>
+                            <a href="/download/${encodeURIComponent(file.name)}" ${isFolder ? 'style="pointer-events: none; color: #333;"' : 'download'}>
+                                ${file.name}
+                            </a>
+                            <span>${size}</span>
+                        </div>
+                    `;
+                    fileList.appendChild(item);
                 });
             })
-            .catch(error => console.error("Error loading files:", error));
+            .catch(error => {
+                console.error("Error loading files:", error);
+                showNotification("Error loading files", 'error');
+            });
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return "0 B";
+            const k = 1024;
+            const sizes = ["B", "KB", "MB", "GB"];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
         }
 
         function downloadAll() {
@@ -121,20 +503,55 @@
         }
 
         function cleanupFiles() {
-            if (confirm("Are you sure you want to delete all files? This cannot be undone.")) {
+            if (confirm("Are you sure you want to delete ALL files and folders? This action cannot be undone.")) {
                 fetch("/cleanup", { method: "POST" })
                 .then(response => response.json())
                 .then(data => {
-                    alert(data.message);
-                    loadFiles(); // Refresh file list
+                    if (data.error) {
+                        showNotification(data.error, 'error');
+                    } else {
+                        showNotification(data.message, 'success');
+                        loadFiles();
+                        loadStorageInfo();
+                    }
                 })
                 .catch(error => {
-                    alert("Error cleaning up files: " + error);
+                    showNotification("Error cleaning up: " + error, 'error');
                 });
             }
         }
 
-        window.onload = loadFiles;
+        function loadStorageInfo() {
+            fetch("/storage-info")
+            .then(response => response.json())
+            .then(data => {
+                const formatSize = (bytes) => {
+                    if (bytes === 0) return "0 B";
+                    const k = 1024;
+                    const sizes = ["B", "KB", "MB", "GB", "TB"];
+                    const i = Math.floor(Math.log(bytes) / Math.log(k));
+                    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+                };
+
+                document.getElementById("totalDisk").textContent = formatSize(data.total_disk);
+                document.getElementById("freeDisk").textContent = formatSize(data.free_disk);
+                document.getElementById("uploadedSize").textContent = formatSize(data.uploaded_size);
+                document.getElementById("fileCount").textContent = data.file_count;
+            })
+            .catch(error => {
+                console.error("Error loading storage info:", error);
+                document.getElementById("totalDisk").textContent = "Error";
+                document.getElementById("freeDisk").textContent = "Error";
+                document.getElementById("uploadedSize").textContent = "Error";
+                document.getElementById("fileCount").textContent = "Error";
+            });
+        }
+
+        window.onload = function() {
+            loadFiles();
+            loadStorageInfo();
+            document.getElementById('serverUrl').textContent = window.location.href;
+        };
     </script>
 </body>
 </html>
