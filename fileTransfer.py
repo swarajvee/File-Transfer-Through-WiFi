@@ -171,16 +171,31 @@ def download_zip():
                     relative_path = os.path.relpath(file_path, UPLOAD_FOLDER)
                     zf.write(file_path, relative_path)
         
-        return send_file(
+        # Use a callback to clean up the file after the response is sent
+        def cleanup_after_response():
+            try:
+                os.unlink(temp_zip.name)
+            except Exception as e:
+                print(f"Error cleaning up temp file: {e}")
+        
+        response = send_file(
             temp_zip.name,
             download_name=f'{zip_name}.zip',
             as_attachment=True,
             mimetype='application/zip'
         )
-    finally:
-        # Clean up the temporary file after sending
-        os.unlink(temp_zip.name)
-
+        
+        # Add cleanup callback to the response
+        response.call_on_close(cleanup_after_response)
+        return response
+        
+    except Exception as e:
+        # Clean up if there was an error creating the zip
+        try:
+            os.unlink(temp_zip.name)
+        except:
+            pass
+        return jsonify({"error": f"Failed to create zip file: {str(e)}"}), 500
 @app.route("/files")
 def list_files():
     """List all available files with sizes"""
