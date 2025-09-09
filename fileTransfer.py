@@ -7,6 +7,9 @@ import concurrent.futures
 from io import BytesIO
 import shutil
 import tempfile
+import time
+from datetime import datetime
+import json
 
 app = Flask(__name__)
 CORS(app)
@@ -59,24 +62,53 @@ def upload_file():
     if not uploaded_files:
         return jsonify({"error": "No valid files selected"}), 400
 
-    for file in uploaded_files:
-        # Check if this is from a folder upload (has webkit relative path)
-        content_disposition = file.headers.get('Content-Disposition', '')
-        relative_path = extract_relative_path(content_disposition, file.filename)
+    # Process files in batches to prevent memory issues
+    batch_size = 10
+    for i in range(0, len(uploaded_files), batch_size):
+        batch = uploaded_files[i:i + batch_size]
+        batch_tasks = []
         
-        if relative_path:
-            # This is from a folder upload, preserve directory structure
-            task = executor.submit(save_file_with_structure, file, relative_path)
-        else:
-            # Regular file upload
-            task = executor.submit(save_file, file)
-        upload_tasks.append(task)
-    
-    # Wait for all uploads to complete
-    for task in upload_tasks:
-        task.result()
+        for file in batch:
+            # Check if this is from a folder upload (has webkit relative path)
+            content_disposition = file.headers.get('Content-Disposition', '')
+            relative_path = extract_relative_path(content_disposition, file.filename)
+            
+            if relative_path:
+                # This is from a folder upload, preserve directory structure
+                task = executor.submit(save_file_with_structure, file, relative_path)
+            else:
+                # Regular file upload
+                task = executor.submit(save_file, file)
+            batch_tasks.append(task)
+        
+        # Wait for batch to complete before processing next batch
+        for task in batch_tasks:
+            try:
+                task.result(timeout=300)  # 5-minute timeout per file
+            except Exception as e:
+                print(f"Error uploading file: {e}")
+                continue
+        
+        # Brief pause between batches
+        time.sleep(0.5)
 
     return jsonify({"message": f"{len(uploaded_files)} files uploaded successfully"}), 200
+
+@app.route("/upload-status", methods=["POST"])
+def upload_status():
+    """Track upload progress"""
+    data = request.get_json()
+    action = data.get('action', '')
+    
+    if action == 'get':
+        # Return current upload status
+        status_file = os.path.join(UPLOAD_FOLDER, 'upload_status.json')
+        if os.path.exists(status_file):
+            with open(status_file, 'r') as f:
+                return jsonify(json.load(f))
+        return jsonify({"status": "idle"})
+    
+    return jsonify({"error": "Invalid action"}), 400
 
 def extract_relative_path(content_disposition, filename):
     """Extract relative path from webkitdirectory file upload"""
@@ -196,6 +228,7 @@ def download_zip():
         except:
             pass
         return jsonify({"error": f"Failed to create zip file: {str(e)}"}), 500
+
 @app.route("/files")
 def list_files():
     """List all available files with sizes"""
