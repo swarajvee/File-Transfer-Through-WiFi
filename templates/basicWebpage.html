@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ShareMe</title>
+    <title>Enhanced File Sender</title>
     <style>
         body { 
             font-family: Arial, sans-serif; 
@@ -195,6 +195,12 @@
             opacity: 1;
             transform: translateX(0);
         }
+        .info-btn {
+            background-color: #f39c12;
+        }
+        .info-btn:hover {
+            background-color: #e67e22;
+        }
         @media (max-width: 768px) {
             .action-buttons {
                 flex-direction: column;
@@ -207,7 +213,7 @@
 </head>
 <body>
     <div class="container">
-        <h2>ShareMe</h2>
+        <h2>Enhanced File Sender</h2>
 
         <!-- Notification Area -->
         <div id="notification" class="notification hidden"></div>
@@ -259,6 +265,7 @@
             <h3>Upload Progress</h3>
             <progress id="uploadProgress" value="0" max="100"></progress>
             <p id="progressText">0%</p>
+            <button onclick="cancelUpload()" class="danger-btn" id="cancelButton" style="display: none; margin-top: 10px;">Cancel Upload</button>
         </div>
 
         <!-- File List -->
@@ -285,6 +292,14 @@
     <script>
         let currentUploadType = 'file';
         let selectedFolderContents = [];
+        let isUploading = false;
+        let currentUploadQueue = [];
+        let uploadStatus = {
+            total: 0,
+            completed: 0,
+            failed: 0,
+            currentFile: ''
+        };
 
         // Show notification
         function showNotification(message, type = 'success') {
@@ -309,6 +324,10 @@
                 document.getElementById('folderContents').innerHTML = '';
                 document.getElementById('folderContents').classList.add('hidden');
             }
+            
+            // Reset upload state when switching modes
+            isUploading = false;
+            currentUploadQueue = [];
         }
 
         // Display folder structure when a folder is selected
@@ -372,77 +391,150 @@
 
         function uploadFiles() {
             let fileInput;
-            let formData = new FormData();
             
             if (currentUploadType === 'file') {
                 fileInput = document.getElementById("fileInput").files;
-                if (fileInput.length === 0) {
-                    showNotification("Please select at least one file.", 'error');
-                    return;
-                }
-                for (let i = 0; i < fileInput.length; i++) {
-                    formData.append("files", fileInput[i]);
-                }
             } else {
                 fileInput = document.getElementById("folderInput").files;
-                if (fileInput.length === 0) {
-                    showNotification("Please select a folder.", 'error');
-                    return;
-                }
-                for (let i = 0; i < fileInput.length; i++) {
-                    const file = fileInput[i];
-                    // For folder uploads, we need to preserve the directory structure
-                    const relativePath = file.webkitRelativePath || file.name;
-                    // Add the file with its relative path information
-                    formData.append("files", file, relativePath);
-                }
+            }
+            
+            if (fileInput.length === 0) {
+                showNotification("Please select at least one file.", 'error');
+                return;
             }
 
+            // Prepare upload queue
+            currentUploadQueue = Array.from(fileInput);
+            uploadStatus.total = currentUploadQueue.length;
+            uploadStatus.completed = 0;
+            uploadStatus.failed = 0;
+            
+            const progressContainer = document.getElementById("progressContainer");
             const progressBar = document.getElementById("uploadProgress");
             const progressText = document.getElementById("progressText");
-            const progressContainer = document.getElementById("progressContainer");
+            const cancelButton = document.getElementById("cancelButton");
+            
             progressContainer.style.display = "block";
             progressBar.value = 0;
-            progressText.innerText = "0%";
+            progressText.innerText = "Preparing upload...";
+            cancelButton.style.display = "block";
+            
+            // Start upload process
+            isUploading = true;
+            processUploadQueue();
+        }
 
-            const xhr = new XMLHttpRequest();
-            
-            xhr.upload.addEventListener("progress", function(event) {
-                if (event.lengthComputable) {
-                    const percent = Math.round((event.loaded / event.total) * 100);
-                    progressBar.value = percent;
-                    progressText.innerText = percent + "%";
-                }
-            });
-            
-            xhr.addEventListener("load", function() {
-                if (xhr.status === 200) {
-                    showNotification("Upload completed successfully!", 'success');
-                    progressBar.value = 100;
-                    progressText.innerText = "100%";
-                    setTimeout(() => {
-                        progressContainer.style.display = "none";
-                    }, 2000);
+        function processUploadQueue() {
+            if (!isUploading || currentUploadQueue.length === 0) {
+                if (uploadStatus.completed + uploadStatus.failed === uploadStatus.total) {
+                    const message = `Upload completed! ${uploadStatus.completed} successful, ${uploadStatus.failed} failed`;
+                    showNotification(message, uploadStatus.failed > 0 ? 'error' : 'success');
+                    
+                    document.getElementById("progressContainer").style.display = "none";
+                    document.getElementById("cancelButton").style.display = "none";
+                    
                     loadFiles();
                     loadStorageInfo();
+                    
                     // Clear file inputs
                     document.getElementById("fileInput").value = "";
                     document.getElementById("folderInput").value = "";
                     document.getElementById("folderContents").innerHTML = "";
                     document.getElementById("folderContents").classList.add("hidden");
-                } else {
-                    showNotification("Error uploading: " + xhr.responseText, 'error');
-                    progressContainer.style.display = "none";
                 }
-            });
+                return;
+            }
             
-            xhr.addEventListener("error", function() {
-                showNotification("Error uploading files.", 'error');
-                progressContainer.style.display = "none";
-            });
+            // Process files in batches of 5 to avoid overwhelming the server
+            const batchSize = 5;
+            const batch = currentUploadQueue.splice(0, batchSize);
             
-            xhr.open("POST", "/upload", true);
-            xhr.send(formData);
+            const batchPromises = batch.map(file => uploadFile(file));
+            
+            Promise.allSettled(batchPromises).then(results => {
+                results.forEach((result, index) => {
+                    if (result.status === 'fulfilled') {
+                        uploadStatus.completed++;
+                    } else {
+                        uploadStatus.failed++;
+                        console.error(`Failed to upload ${batch[index].name}:`, result.reason);
+                    }
+                });
+                
+                updateProgress();
+                
+                // Process next batch after a short delay
+                setTimeout(processUploadQueue, 500);
+            });
+        }
+
+        function uploadFile(file) {
+            return new Promise((resolve, reject) => {
+                uploadStatus.currentFile = file.name;
+                
+                const formData = new FormData();
+                const relativePath = file.webkitRelativePath || '';
+                
+                // For folder uploads, preserve structure
+                if (relativePath) {
+                    formData.append('files', file, relativePath);
+                } else {
+                    formData.append('files', file);
+                }
+                
+                const xhr = new XMLHttpRequest();
+                
+                xhr.upload.addEventListener('progress', (event) => {
+                    if (event.lengthComputable) {
+                        // Update individual file progress if needed
+                    }
+                });
+                
+                xhr.addEventListener('load', () => {
+                    if (xhr.status === 200) {
+                        resolve();
+                    } else {
+                        reject(new Error(`HTTP ${xhr.status}: ${xhr.responseText}`));
+                    }
+                });
+                
+                xhr.addEventListener('error', () => {
+                    reject(new Error('Network error'));
+                });
+                
+                xhr.addEventListener('timeout', () => {
+                    reject(new Error('Request timeout'));
+                });
+                
+                // Set longer timeout for large files
+                xhr.timeout = 300000; // 5 minutes
+                
+                xhr.open('POST', '/upload', true);
+                xhr.send(formData);
+            });
+        }
+
+        function updateProgress() {
+            const progressBar = document.getElementById("uploadProgress");
+            const progressText = document.getElementById("progressText");
+            
+            const percent = Math.round((uploadStatus.completed / uploadStatus.total) * 100);
+            progressBar.value = percent;
+            
+            progressText.innerHTML = `
+                ${percent}% Complete<br>
+                Files: ${uploadStatus.completed}/${uploadStatus.total} uploaded<br>
+                Failed: ${uploadStatus.failed}<br>
+                Current: ${uploadStatus.currentFile.substring(0, 30)}${uploadStatus.currentFile.length > 30 ? '...' : ''}
+            `;
+        }
+
+        function cancelUpload() {
+            isUploading = false;
+            currentUploadQueue = [];
+            showNotification('Upload cancelled', 'info');
+            document.getElementById("progressContainer").style.display = "none";
+            document.getElementById("cancelButton").style.display = "none";
         }
 
         function loadFiles() {
